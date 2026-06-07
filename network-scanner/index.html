@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetRadar - Network & Device Scanner</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <i class="fas fa-radar" id="logo-icon"></i>
+                <h1>NetRadar</h1>
+            </div>
+            <div class="header-right">
+                <button id="scan-btn" class="btn-scan">
+                    <i class="fas fa-satellite-dish"></i>
+                    <span>Scan</span>
+                </button>
+                <button id="settings-btn" class="btn-icon">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Radar Animation Overlay -->
+        <div id="radar-overlay" class="radar-overlay hidden">
+            <div class="radar-container">
+                <div class="radar-circle"></div>
+                <div class="radar-circle delay-1"></div>
+                <div class="radar-circle delay-2"></div>
+                <div class="radar-sweep"></div>
+                <div class="radar-center"></div>
+                <p class="radar-text">Scanning nearby networks...</p>
+                <div class="scan-progress">
+                    <div class="scan-progress-bar" id="scan-progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button class="toggle-btn active" data-view="map">
+                <i class="fas fa-map"></i> Map
+            </button>
+            <button class="toggle-btn" data-view="list">
+                <i class="fas fa-list"></i> List
+            </button>
+            <button class="toggle-btn" data-view="radar">
+                <i class="fas fa-broadcast-tower"></i> Radar
+            </button>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <i class="fas fa-wifi"></i>
+                <span id="wifi-count">0</span>
+                <label>WiFi</label>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-mobile-alt"></i>
+                <span id="mobile-count">0</span>
+                <label>Mobile</label>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-laptop"></i>
+                <span id="laptop-count">0</span>
+                <label>Computers</label>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-bluetooth-b"></i>
+                <span id="bluetooth-count">0</span>
+                <label>Bluetooth</label>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-network-wired"></i>
+                <span id="total-count">0</span>
+                <label>Total</label>
+            </div>
+        </div>
+
+        <!-- Map View -->
+        <div id="map-view" class="view-panel active">
+            <div id="map"></div>
+        </div>
+
+        <!-- List View -->
+        <div id="list-view" class="view-panel">
+            <div class="list-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search networks & devices...">
+                </div>
+                <div class="filter-chips">
+                    <button class="chip active" data-filter="all">All</button>
+                    <button class="chip" data-filter="wifi">WiFi</button>
+                    <button class="chip" data-filter="mobile">Mobile</button>
+                    <button class="chip" data-filter="computer">Computer</button>
+                    <button class="chip" data-filter="bluetooth">Bluetooth</button>
+                    <button class="chip" data-filter="iot">IoT</button>
+                </div>
+                <div class="sort-options">
+                    <select id="sort-select">
+                        <option value="distance">Sort by Distance</option>
+                        <option value="signal">Sort by Signal</option>
+                        <option value="name">Sort by Name</option>
+                        <option value="type">Sort by Type</option>
+                    </select>
+                </div>
+            </div>
+            <div id="device-list" class="device-list"></div>
+        </div>
+
+        <!-- Radar View -->
+        <div id="radar-view" class="view-panel">
+            <canvas id="radar-canvas"></canvas>
+            <div class="radar-legend">
+                <div class="legend-item"><span class="dot wifi"></span> WiFi</div>
+                <div class="legend-item"><span class="dot mobile"></span> Mobile</div>
+                <div class="legend-item"><span class="dot computer"></span> Computer</div>
+                <div class="legend-item"><span class="dot bluetooth"></span> Bluetooth</div>
+                <div class="legend-item"><span class="dot iot"></span> IoT</div>
+            </div>
+        </div>
+
+        <!-- Device Detail Modal -->
+        <div id="device-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Device Details</h2>
+                    <button class="modal-close" id="modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button class="modal-close" id="settings-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <h3>Scan Settings</h3>
+                        <div class="setting-item">
+                            <label>Scan Radius (meters)</label>
+                            <input type="range" id="scan-radius" min="50" max="500" value="200">
+                            <span id="radius-value">200m</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Auto-scan interval (seconds)</label>
+                            <input type="range" id="scan-interval" min="5" max="60" value="15">
+                            <span id="interval-value">15s</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="auto-scan" checked>
+                                Enable Auto-scan
+                            </label>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Display</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="show-hidden" checked>
+                                Show Hidden Networks
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>Distance Unit</label>
+                            <select id="distance-unit">
+                                <option value="meters">Meters</option>
+                                <option value="feet">Feet</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="dark-mode" checked>
+                                Dark Mode
+                            </label>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Notifications</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="notify-new">
+                                Notify on New Devices
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
